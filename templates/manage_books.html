@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manage Books - LibroTrack</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .container { margin-top: 30px; }
+        footer { background-color: #343a40; color: white; padding: 10px; text-align: center; margin-top: 50px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="text-center mb-4">Manage Books</h2>
+
+        <!-- Book Form -->
+        <form method="POST" class="row g-3 mb-4">
+            <input type="hidden" name="book_id" id="book_id">
+            <div class="col-md-4">
+                <input type="text" name="title" class="form-control" placeholder="Book Title" required>
+            </div>
+            <div class="col-md-3">
+                <input type="text" name="author" class="form-control" placeholder="Author" required>
+            </div>
+            <div class="col-md-2">
+                <input type="number" name="year" class="form-control" placeholder="Year" required>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" name="action" value="add" class="btn btn-success">Add Book</button>
+            </div>
+        </form>
+
+        <!-- Book Table -->
+        <table class="table table-striped table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>Year</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for book in books %}
+                <tr>
+                    <td>{{ book[0] }}</td>
+                    <td>{{ book[1] }}</td>
+                    <td>{{ book[2] }}</td>
+                    <td>{{ book[3] }}</td>
+                    <td>
+                        <form method="POST" style="display:inline;">
+                            <input type="hidden" name="book_id" value="{{ book[0] }}">
+                            <input type="hidden" name="title" value="{{ book[1] }}">
+                            <input type="hidden" name="author" value="{{ book[2] }}">
+                            <input type="hidden" name="year" value="{{ book[3] }}">
+                            <button type="submit" name="action" value="delete" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                        <button class="btn btn-warning btn-sm edit-btn" 
+                                data-id="{{ book[0] }}" 
+                                data-title="{{ book[1] }}" 
+                                data-author="{{ book[2] }}" 
+                                data-year="{{ book[3] }}">Edit</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <footer>© 2025 LibroTrack - Library Management System. All rights reserved.</footer>
+
+    <script>
+        // Fill form for editing
+        document.querySelectorAll('.edit-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                document.querySelector('input[name="book_id"]').value = this.dataset.id;
+                document.querySelector('input[name="title"]').value = this.dataset.title;
+                document.querySelector('input[name="author"]').value = this.dataset.author;
+                document.querySelector('input[name="year"]').value = this.dataset.year;
+                document.querySelector('button[name="action"]').value = 'edit';
+                document.querySelector('button[name="action"]').textContent = 'Update Book';
+            });
+        });
+    </script>
+</body>
+</html>
