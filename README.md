@@ -43,7 +43,7 @@
 | Database    | SQLite                      |
 | Hosting     | Local Server or Cloud (on request) |
 
-##✨ Developed By
+✨ Developed By
   - Thimmisetty Devi Sree
   - Feel free to connect on LinkedIn
   
