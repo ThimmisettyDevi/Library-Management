@@ -1,62 +1,134 @@
-<!-- templates/add_book.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Add Book - LibroTrack</title>
+    <meta charset="UTF-8">
+    <title>Manage Books - LibroTrack</title> 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: url('library2.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        main {
+            flex-grow: 1;
+        }
+
+        .container {
+            background-color: rgba(0, 0, 0, 0.75);
+            padding: 30px;
+            margin-top: 40px;
+            border-radius: 15px;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #f8f9fa;
+        }
+
+        label {
+            color: #dee2e6;
+        }
+
+        .btn-custom {
+            background-color: #198754;
+            color: white;
+        }
+
+        .btn-custom:hover {
+            background-color: #157347;
+        }
+
+        .table {
+            margin-top: 30px;
+        }
+
+        .table th, .table td {
+            background-color: #212529;
+            color: #f8f9fa;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+        }
+    </style>
 </head>
 <body>
+    {% include 'header.html' %}
 
-<!-- Header -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="/">LibroTrack</a>
-    <div class="collapse navbar-collapse">
-      <ul class="navbar-nav ms-auto">
-        <li class="nav-item">
-          <a class="nav-link" href="/admin_dashboard">Dashboard</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="/logout">Logout</a>
-        </li>
-      </ul>
-    </div>
-  </div>
-</nav>
+    <main>
+        <div class="container">
+            <h2>Manage Books</h2>
 
-<!-- Main Content -->
-<div class="container py-5">
-    <div class="col-md-8 mx-auto bg-white p-4 rounded shadow">
-        <h3 class="mb-4 text-center">Add New Book</h3>
-        <form method="POST" action="/add_book">
-            <div class="mb-3">
-                <label>Title</label>
-                <input type="text" name="title" class="form-control" required>
-            </div>
-            <div class="mb-3">
-                <label>Author</label>
-                <input type="text" name="author" class="form-control" required>
-            </div>
-            <div class="mb-3">
-                <label>ISBN</label>
-                <input type="text" name="isbn" class="form-control" required>
-            </div>
-            <div class="mb-3">
-                <label>Quantity</label>
-                <input type="number" name="quantity" class="form-control" min="1" required>
-            </div>
-            <button type="submit" class="btn btn-success w-100">Add Book</button>
-            <a href="/manage_books" class="btn btn-secondary w-100 mt-2">Back to Book Management</a>
-        </form>
-    </div>
-</div>
+            <!-- 📚 Add or Edit Book -->
+            <form method="POST" action="/add_or_edit_book">
+                <div class="row form-section">
+                    <div class="col-md-4">
+                        <label for="title">Book Title</label>
+                        <input type="text" name="title" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="author">Author</label>
+                        <input type="text" name="author" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="isbn">ISBN</label>
+                        <input type="text" name="isbn" class="form-control" required>
+                    </div>
+                    <div class="col-md-4 mt-3">
+                        <label for="genre">Genre</label>
+                        <input type="text" name="genre" class="form-control">
+                    </div>
+                    <div class="col-md-4 mt-3">
+                        <label for="quantity">Quantity</label>
+                        <input type="number" name="quantity" class="form-control" required>
+                    </div>
+                    <div class="col-md-4 mt-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-custom w-100">Save Book</button>
+                    </div>
+                </div>
+            </form>
 
-<!-- Footer -->
-<footer class="bg-dark text-white text-center py-3 fixed-bottom">
-    <div class="container">
-        &copy; 2025 LibroTrack Library Management System
-    </div>
-</footer>
+            <!-- 📄 List of Books -->
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Author</th>
+                        <th>ISBN</th>
+                        <th>Genre</th>
+                        <th>Quantity</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for book in books %}
+                    <tr>
+                        <td>{{ book.title }}</td>
+                        <td>{{ book.author }}</td>
+                        <td>{{ book.isbn }}</td>
+                        <td>{{ book.genre }}</td>
+                        <td>{{ book.quantity }}</td>
+                        <td>
+                            <a href="/edit_book/{{ book.id }}" class="btn btn-warning btn-sm">Edit</a>
+                            <a href="/delete_book/{{ book.id }}" class="btn btn-danger btn-sm">Delete</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center">No books found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
 
+    {% include 'footer.html' %}
 </body>
 </html>

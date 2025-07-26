@@ -1,60 +1,44 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>My Issued Books - LibroTrack</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-        .container {
-            padding-top: 50px;
-        }
-        table {
-            background-color: white;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-    </style>
-</head>
-<body>
-<div class="container">
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
     <h2 class="text-center mb-4">My Issued Books</h2>
 
     {% if books %}
-    <table class="table table-striped">
-        <thead class="table-dark">
-            <tr>
-                <th>Title</th>
-                <th>Author</th>
-                <th>Issued Date</th>
-                <th>Due Date</th>
-                <th>Return</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for book in books %}
-            <tr>
-                <td>{{ book['title'] }}</td>
-                <td>{{ book['author'] }}</td>
-                <td>{{ book['issued_date'] }}</td>
-                <td>{{ book['due_date'] }}</td>
-                <td>
-                    <form action="/return_book/{{ book['transaction_id'] }}" method="POST">
-                        <button class="btn btn-sm btn-danger">Return</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-responsive">
+        <table class="table table-striped table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>Issued Date</th>
+                    <th>Due Date</th>
+                    <th>Return</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for book in books %}
+                <tr>
+                    <td>{{ book['title'] }}</td>
+                    <td>{{ book['author'] }}</td>
+                    <td>{{ book['issued_date'] }}</td>
+                    <td>{{ book['due_date'] }}</td>
+                    <td>
+                        <form action="{{ url_for('return_book', issue_id=book['transaction_id']) }}" method="POST">
+                            <button class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to return this book?');">Return</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% else %}
         <p class="text-center text-muted">No books issued currently.</p>
     {% endif %}
 
     <div class="text-center mt-4">
-        <a href="/member_dashboard" class="btn btn-secondary">⬅ Back to Dashboard</a>
+        <a href="{{ url_for('member_dashboard') }}" class="btn btn-secondary">⬅ Back to Dashboard</a>
     </div>
 </div>
-</body>
-</html>
+{% endblock %}

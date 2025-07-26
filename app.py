@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import sqlite3
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
+
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -105,16 +107,59 @@ def manage_books():
         books = cursor.execute("SELECT * FROM books").fetchall()
     return render_template('manage_books.html', books=books)
 
-@app.route('/manage_members')
-def manage_members():
+@app.route('/search_members', methods=['GET', 'POST'])
+def search_members():
     if 'user_id' not in session or session.get('role') != 'admin':
-        flash('Unauthorized access', 'danger')
+        flash('Please login as admin first.', 'warning')
         return redirect('/login')
 
-    conn = get_db_connection()
-    members = conn.execute("SELECT * FROM users WHERE role = 'member'").fetchall()
-    conn.close()
+    keyword = ''
+    results = []
+
+    if request.method == 'POST':
+        keyword = request.form['keyword']
+        conn = get_db_connection()
+        query = "SELECT * FROM user WHERE role = 'user' AND (name LIKE ? OR email LIKE ?)"
+        results = conn.execute(query, (f'%{keyword}%', f'%{keyword}%')).fetchall()
+        conn.close()
+
+    return render_template('search_members.html', keyword=keyword, results=results)
+
+@app.route('/manage_members')
+def manage_members():
+    if session.get('role') != 'admin':
+        flash('Unauthorized access.', 'danger')
+        return redirect('/login')
+
+    with get_db_connection() as conn:
+        members = conn.execute("SELECT id, name, email, role FROM users WHERE role != 'admin'").fetchall()
+
     return render_template('manage_members.html', members=members)
+
+@app.route('/add_admin', methods=['GET', 'POST'])
+def add_admin():
+    if request.method == 'POST':
+        name = request.form['name']
+        email = request.form['email']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+
+        if password != confirm_password:
+            flash('Passwords do not match.', 'danger')
+            return redirect('/add_admin')
+
+        # Add to database here (check if already exists, etc.)
+        hashed_password = generate_password_hash(password)
+        new_admin = users(name=name, email=email, password=hashed_password, role='admin')
+        db.session.add(new_admin)
+        db.session.commit()
+
+        flash('New admin added successfully!', 'success')
+        return redirect('/admin_dashboard')
+
+    return render_template('add_admin.html')
+
+
 
 @app.route('/add_member', methods=['GET', 'POST'])
 def add_member():
@@ -238,20 +283,55 @@ def add_book():
 @app.route('/my_books')
 def my_books():
     if 'user_id' not in session or session.get('role') != 'member':
-        flash('Unauthorized access', 'danger')
+        flash('Unauthorized access. Please log in as a member.', 'danger')
         return redirect('/login')
 
     user_id = session['user_id']
     conn = get_db_connection()
+
     books = conn.execute("""
-        SELECT t.id as transaction_id, b.title, b.author, t.issue_date, t.due_date 
+        SELECT 
+            t.id AS transaction_id, 
+            b.title, 
+            b.author, 
+            t.issue_date, 
+            t.due_date 
         FROM transactions t
         JOIN books b ON t.book_id = b.id
         WHERE t.member_id = ? AND t.return_date IS NULL
+        ORDER BY t.issue_date DESC
     """, (user_id,)).fetchall()
+
     conn.close()
 
     return render_template('my_books.html', books=books)
+
+@app.route('/issued_books')
+def issued_books():
+    if 'user_id' not in session or session.get('role') != 'member':
+        flash('Unauthorized access', 'danger')
+        return redirect('/login')
+
+    user_id = session['user_id']
+    user_role = session.get('role')
+
+    conn = get_db_connection()
+
+    issued = conn.execute("""
+        SELECT t.id, b.title, u.name, t.issue_date, t.due_date, 
+               CASE WHEN t.return_date IS NOT NULL THEN 1 ELSE 0 END AS returned
+        FROM transactions t
+        JOIN books b ON t.book_id = b.id
+        JOIN users u ON t.member_id = u.id
+        WHERE u.id = ?
+        ORDER BY t.issue_date DESC
+    """, (user_id,)).fetchall()
+
+    conn.close()
+
+    return render_template('issued_books.html', issued=issued, user_role=user_role)
+
+   
 
 @app.route('/return_book/<int:transaction_id>', methods=['POST'])
 def return_transaction_book(transaction_id):
@@ -266,13 +346,15 @@ def return_transaction_book(transaction_id):
     flash('Book returned successfully!', 'success')
     return redirect('/my_books')
 
-@app.route('/reports')
+@app.route('/reports', methods=['GET', 'POST'])
 def reports():
     if 'user_id' not in session or session.get('role') != 'admin':
         flash('Unauthorized access', 'danger')
         return redirect('/login')
 
     conn = get_db_connection()
+    
+    # For dashboard stats (you can show these optionally)
     total_books = conn.execute("SELECT COUNT(*) FROM books").fetchone()[0]
     total_members = conn.execute("SELECT COUNT(*) FROM users WHERE role='member'").fetchone()[0]
     total_issued = conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[0]
@@ -285,13 +367,37 @@ def reports():
         ORDER BY count DESC
         LIMIT 5
     """).fetchall()
+
+    report_data = None
+
+    if request.method == 'POST':
+        report_type = request.form.get('report_type')
+        start_date = request.form.get('start_date')
+        end_date = request.form.get('end_date')
+
+        if report_type and start_date and end_date:
+            query = """
+                SELECT t.id, u.name AS member_name, b.title AS book_title,
+                       t.issue_date, t.return_date
+                FROM transactions t
+                JOIN users u ON t.user_id = u.id
+                JOIN books b ON t.book_id = b.id
+                WHERE t.issue_date BETWEEN ? AND ?
+                ORDER BY t.issue_date DESC
+            """
+            report_data = conn.execute(query, (start_date, end_date)).fetchall()
+        else:
+            flash("Please fill all report filters", "warning")
+
     conn.close()
 
-    return render_template('reports.html', 
+    return render_template('reports.html',
                            total_books=total_books,
                            total_members=total_members,
                            total_issued=total_issued,
-                           top_books=top_books)
+                           top_books=top_books,
+                           report_data=report_data)
+
 
 @app.route('/search_books')
 def search_books():
@@ -299,10 +405,25 @@ def search_books():
         flash('Please log in first.', 'warning')
         return redirect('/login')
 
+    query = request.args.get('query', '').strip().lower()
+    user_role = session.get('role')
+
     conn = get_db_connection()
-    books = conn.execute("SELECT * FROM books").fetchall()
+    conn.row_factory = sqlite3.Row
+
+    if query:
+        books = conn.execute(
+            "SELECT *, quantity AS available_copies FROM books WHERE LOWER(title) LIKE ?", ('%' + query + '%',)
+        ).fetchall()
+    else:
+        books = conn.execute("SELECT *, quantity AS available_copies FROM books").fetchall()
+
     conn.close()
-    return render_template('search_books.html', books=books)
+
+    return render_template('search_books.html', books=books, user_role=user_role)
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
